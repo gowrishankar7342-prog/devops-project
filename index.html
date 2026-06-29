@@ -1,9 +1,663 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>DevOps Project</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FlowDeploy — Automated Deployment Pipeline</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --space:    #0A0E1A;
+      --card:     #0F1729;
+      --border:   #1E2D4A;
+      --cyan:     #00D4FF;
+      --violet:   #7C3AED;
+      --green:    #10B981;
+      --amber:    #F59E0B;
+      --red:      #EF4444;
+      --text:     #F1F5F9;
+      --muted:    #64748B;
+      --mono:     'JetBrains Mono', monospace;
+      --sans:     'Inter', sans-serif;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--space);
+      color: var(--text);
+      font-family: var(--sans);
+      overflow-x: hidden;
+    }
+
+    /* ── NAV ── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1.2rem 3rem;
+      background: rgba(10,14,26,0.75);
+      backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--border);
+    }
+    .logo {
+      font-family: var(--mono); font-weight: 700; font-size: 1.1rem;
+      color: var(--cyan); letter-spacing: -0.02em;
+    }
+    .logo span { color: var(--text); }
+    nav ul { display: flex; gap: 2.5rem; list-style: none; }
+    nav a { font-size: .85rem; color: var(--muted); text-decoration: none; letter-spacing: .05em; text-transform: uppercase; transition: color .2s; }
+    nav a:hover { color: var(--cyan); }
+    .nav-cta {
+      font-family: var(--mono); font-size: .8rem; font-weight: 600;
+      padding: .55rem 1.4rem; border: 1px solid var(--cyan); border-radius: 4px;
+      color: var(--cyan); text-decoration: none; transition: background .2s, color .2s;
+    }
+    .nav-cta:hover { background: var(--cyan); color: var(--space); }
+
+    /* ── HERO ── */
+    .hero {
+      position: relative; min-height: 100vh;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      text-align: center; padding: 8rem 2rem 4rem; overflow: hidden;
+    }
+
+    /* Parallax layers */
+    .parallax-layer { position: absolute; inset: 0; will-change: transform; }
+
+    /* Layer 1 — deep grid */
+    #layer-grid {
+      background-image:
+        linear-gradient(rgba(0,212,255,.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,212,255,.04) 1px, transparent 1px);
+      background-size: 60px 60px;
+      transform: translateY(0);
+    }
+
+    /* Layer 2 — glow orbs */
+    #layer-orbs {
+      pointer-events: none;
+      transform: translateY(0);
+    }
+    .orb {
+      position: absolute; border-radius: 50%;
+      filter: blur(80px); opacity: .25;
+    }
+    .orb-1 { width: 600px; height: 600px; background: var(--violet); top: -100px; left: -150px; }
+    .orb-2 { width: 500px; height: 500px; background: var(--cyan); top: 50px; right: -100px; opacity: .15; }
+    .orb-3 { width: 350px; height: 350px; background: var(--violet); bottom: 0; left: 40%; opacity: .2; }
+
+    /* Layer 3 — floating nodes */
+    #layer-nodes {
+      pointer-events: none;
+      transform: translateY(0);
+    }
+    .float-node {
+      position: absolute;
+      font-family: var(--mono); font-size: .7rem;
+      padding: .35rem .75rem; border-radius: 3px;
+      border: 1px solid var(--border);
+      background: rgba(15,23,41,.8);
+      color: var(--muted);
+      animation: float-drift 8s ease-in-out infinite;
+    }
+    .float-node.active { border-color: var(--green); color: var(--green); }
+    .float-node.build  { border-color: var(--cyan);  color: var(--cyan);  animation-delay: -2s; }
+    .float-node.test   { border-color: var(--amber); color: var(--amber); animation-delay: -5s; }
+    .float-node.n1 { top: 18%; left: 5%; }
+    .float-node.n2 { top: 28%; right: 8%; }
+    .float-node.n3 { top: 62%; left: 3%; }
+    .float-node.n4 { top: 55%; right: 5%; }
+    .float-node.n5 { top: 78%; left: 28%; }
+    .float-node.n6 { top: 12%; right: 25%; }
+
+    @keyframes float-drift {
+      0%,100% { transform: translateY(0px); }
+      50%      { transform: translateY(-12px); }
+    }
+
+    /* Hero content */
+    .hero-content { position: relative; z-index: 5; max-width: 860px; }
+
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: .5rem;
+      font-family: var(--mono); font-size: .75rem; color: var(--cyan);
+      border: 1px solid rgba(0,212,255,.3); border-radius: 2px;
+      padding: .35rem .9rem; margin-bottom: 2.2rem;
+      background: rgba(0,212,255,.05);
+    }
+    .badge-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
+
+    @keyframes pulse {
+      0%,100% { opacity: 1; box-shadow: 0 0 0 0 rgba(16,185,129,.6); }
+      50%      { opacity: .8; box-shadow: 0 0 0 6px rgba(16,185,129,0); }
+    }
+
+    h1 {
+      font-family: var(--mono); font-size: clamp(2.4rem, 6vw, 5rem);
+      font-weight: 700; line-height: 1.05; letter-spacing: -.03em;
+      margin-bottom: 1.6rem;
+    }
+    h1 em { font-style: normal; color: var(--cyan); }
+
+    .hero-sub {
+      font-size: 1.1rem; color: var(--muted); max-width: 580px;
+      margin: 0 auto 3rem; line-height: 1.7; font-weight: 300;
+    }
+
+    .hero-actions { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+    .btn-primary {
+      font-family: var(--mono); font-size: .9rem; font-weight: 600;
+      padding: .85rem 2rem; border-radius: 4px;
+      background: var(--cyan); color: var(--space);
+      text-decoration: none; transition: box-shadow .2s, transform .15s;
+      border: none; cursor: pointer;
+    }
+    .btn-primary:hover { box-shadow: 0 0 28px rgba(0,212,255,.45); transform: translateY(-1px); }
+    .btn-ghost {
+      font-family: var(--mono); font-size: .9rem; font-weight: 400;
+      padding: .85rem 2rem; border-radius: 4px;
+      border: 1px solid var(--border); color: var(--text);
+      text-decoration: none; transition: border-color .2s, transform .15s;
+      cursor: pointer; background: transparent;
+    }
+    .btn-ghost:hover { border-color: var(--violet); transform: translateY(-1px); }
+
+    /* ── STATS BAR ── */
+    .stats-bar {
+      position: relative; z-index: 5;
+      display: flex; justify-content: center; gap: 0;
+      margin-top: 5rem; border: 1px solid var(--border);
+      border-radius: 8px; overflow: hidden; background: var(--card);
+      max-width: 760px; width: 100%;
+    }
+    .stat {
+      flex: 1; padding: 1.6rem 1.2rem; text-align: center;
+      border-right: 1px solid var(--border);
+    }
+    .stat:last-child { border-right: none; }
+    .stat-val {
+      font-family: var(--mono); font-size: 1.9rem; font-weight: 700;
+      color: var(--cyan); display: block;
+    }
+    .stat-lbl { font-size: .72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .1em; margin-top: .3rem; }
+
+    /* ── PIPELINE SECTION ── */
+    .section { padding: 7rem 3rem; max-width: 1100px; margin: 0 auto; }
+    .section-eye {
+      font-family: var(--mono); font-size: .72rem; color: var(--cyan);
+      letter-spacing: .2em; text-transform: uppercase;
+      margin-bottom: 1rem; display: block;
+    }
+    .section-title {
+      font-family: var(--mono); font-size: clamp(1.8rem, 4vw, 2.8rem);
+      font-weight: 700; letter-spacing: -.02em; margin-bottom: 1rem;
+      line-height: 1.15;
+    }
+    .section-sub { color: var(--muted); font-size: 1rem; max-width: 560px; line-height: 1.7; margin-bottom: 3.5rem; }
+
+    /* Pipeline flow */
+    .pipeline {
+      display: flex; align-items: stretch; gap: 0;
+      border: 1px solid var(--border); border-radius: 10px; overflow: hidden;
+      background: var(--card);
+    }
+    .pipe-stage {
+      flex: 1; padding: 2rem 1.5rem; border-right: 1px solid var(--border);
+      position: relative; transition: background .2s;
+    }
+    .pipe-stage:last-child { border-right: none; }
+    .pipe-stage:hover { background: rgba(0,212,255,.04); }
+
+    .pipe-arrow {
+      position: absolute; right: -1px; top: 50%;
+      transform: translateY(-50%);
+      width: 0; height: 0;
+      border-top: 10px solid transparent;
+      border-bottom: 10px solid transparent;
+      border-left: 10px solid var(--border);
+      z-index: 2;
+    }
+    .pipe-stage:last-child .pipe-arrow { display: none; }
+
+    .pipe-icon { font-size: 1.6rem; margin-bottom: .8rem; }
+    .pipe-name {
+      font-family: var(--mono); font-size: .8rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: .1em;
+      margin-bottom: .5rem;
+    }
+    .pipe-name.success { color: var(--green); }
+    .pipe-name.running { color: var(--cyan); }
+    .pipe-name.pending { color: var(--muted); }
+    .pipe-desc { font-size: .82rem; color: var(--muted); line-height: 1.6; }
+    .pipe-time {
+      font-family: var(--mono); font-size: .7rem; color: var(--muted);
+      margin-top: .8rem; display: flex; align-items: center; gap: .4rem;
+    }
+    .dot-status {
+      width: 6px; height: 6px; border-radius: 50%;
+      display: inline-block;
+    }
+    .dot-status.green { background: var(--green); }
+    .dot-status.cyan  { background: var(--cyan); animation: pulse 1.5s infinite; }
+    .dot-status.grey  { background: var(--muted); }
+
+    /* Running bar */
+    .run-bar { height: 3px; background: var(--border); border-radius: 2px; margin-top: .8rem; overflow: hidden; }
+    .run-fill { height: 100%; background: var(--cyan); border-radius: 2px; width: 65%; animation: run 2s ease-in-out infinite alternate; }
+    @keyframes run { from { width: 40%; } to { width: 85%; } }
+
+    /* ── FEATURES ── */
+    .features { padding: 7rem 3rem; background: var(--card); }
+    .features-inner { max-width: 1100px; margin: 0 auto; }
+    .feat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; }
+    .feat-card {
+      padding: 2rem; border: 1px solid var(--border); border-radius: 8px;
+      background: var(--space); transition: border-color .2s, transform .2s;
+    }
+    .feat-card:hover { border-color: var(--violet); transform: translateY(-4px); }
+    .feat-icon {
+      width: 44px; height: 44px; border-radius: 8px;
+      background: rgba(124,58,237,.15); border: 1px solid rgba(124,58,237,.3);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.2rem; margin-bottom: 1.2rem;
+    }
+    .feat-name { font-family: var(--mono); font-weight: 600; font-size: .9rem; margin-bottom: .6rem; }
+    .feat-desc { font-size: .85rem; color: var(--muted); line-height: 1.65; }
+
+    /* ── TERMINAL ── */
+    .terminal-section { padding: 7rem 3rem; max-width: 1100px; margin: 0 auto; }
+    .terminal {
+      border-radius: 10px; overflow: hidden;
+      border: 1px solid var(--border); box-shadow: 0 24px 80px rgba(0,0,0,.5);
+    }
+    .terminal-bar {
+      background: #1A2438; padding: .85rem 1.2rem;
+      display: flex; align-items: center; gap: .5rem;
+    }
+    .t-dot { width: 12px; height: 12px; border-radius: 50%; }
+    .t-dot.r { background: var(--red); }
+    .t-dot.y { background: var(--amber); }
+    .t-dot.g { background: var(--green); }
+    .t-label { font-family: var(--mono); font-size: .75rem; color: var(--muted); margin-left: .5rem; }
+    .terminal-body {
+      background: #060A14; padding: 2rem;
+      font-family: var(--mono); font-size: .82rem; line-height: 1.9;
+    }
+    .t-prompt { color: var(--cyan); }
+    .t-cmd    { color: var(--text); }
+    .t-ok     { color: var(--green); }
+    .t-info   { color: var(--muted); }
+    .t-hi     { color: var(--violet); }
+    .t-cursor { display: inline-block; width: 8px; height: 14px; background: var(--cyan); animation: blink 1s step-end infinite; vertical-align: -2px; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+    /* ── PARALLAX SECTION ── */
+    .parallax-mid {
+      position: relative; min-height: 480px;
+      display: flex; align-items: center; justify-content: center;
+      overflow: hidden; text-align: center;
+    }
+    #layer-mid-bg {
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse at 50% 50%, rgba(124,58,237,.25) 0%, transparent 70%);
+      transform: translateY(0); will-change: transform;
+    }
+    #layer-mid-grid {
+      position: absolute; inset: 0;
+      background-image:
+        linear-gradient(rgba(124,58,237,.08) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(124,58,237,.08) 1px, transparent 1px);
+      background-size: 40px 40px;
+      transform: translateY(0); will-change: transform;
+    }
+    .mid-content { position: relative; z-index: 5; padding: 3rem 2rem; }
+    .mid-content h2 {
+      font-family: var(--mono); font-size: clamp(2rem,5vw,3.5rem);
+      font-weight: 700; letter-spacing: -.03em; margin-bottom: 1.2rem;
+    }
+    .mid-content h2 em { font-style: normal; color: var(--violet); }
+    .mid-content p { color: var(--muted); font-size: 1.05rem; max-width: 540px; margin: 0 auto 2.5rem; line-height: 1.7; }
+
+    /* ── METRICS ── */
+    .metrics { padding: 7rem 3rem; max-width: 1100px; margin: 0 auto; }
+    .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.2rem; }
+    .metric-card {
+      padding: 1.8rem; border: 1px solid var(--border); border-radius: 8px;
+      background: var(--card);
+    }
+    .metric-label { font-size: .75rem; color: var(--muted); text-transform: uppercase; letter-spacing: .1em; margin-bottom: .8rem; font-family: var(--mono); }
+    .metric-val {
+      font-family: var(--mono); font-size: 2.4rem; font-weight: 700;
+    }
+    .metric-val.c  { color: var(--cyan); }
+    .metric-val.g  { color: var(--green); }
+    .metric-val.v  { color: var(--violet); }
+    .metric-val.a  { color: var(--amber); }
+    .metric-bar { height: 4px; border-radius: 2px; background: var(--border); margin-top: 1rem; overflow: hidden; }
+    .metric-fill { height: 100%; border-radius: 2px; }
+    .metric-fill.c { background: var(--cyan); }
+    .metric-fill.g { background: var(--green); }
+    .metric-fill.v { background: var(--violet); }
+    .metric-fill.a { background: var(--amber); }
+    .metric-sub { font-size: .78rem; color: var(--muted); margin-top: .6rem; }
+
+    /* ── FOOTER ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 3rem; text-align: center;
+      font-family: var(--mono); font-size: .78rem; color: var(--muted);
+    }
+    footer strong { color: var(--cyan); }
+
+    /* ── SCROLL REVEAL ── */
+    .reveal { opacity: 0; transform: translateY(30px); transition: opacity .7s ease, transform .7s ease; }
+    .reveal.visible { opacity: 1; transform: translateY(0); }
+  </style>
 </head>
 <body>
-    <h1>Welcome to DevOps Automated Deployment Pipeline</h1>
+
+<!-- NAV -->
+<nav>
+  <div class="logo">flow<span>deploy</span></div>
+  <ul>
+    <li><a href="#pipeline">Pipeline</a></li>
+    <li><a href="#features">Features</a></li>
+    <li><a href="#metrics">Metrics</a></li>
+  </ul>
+  <a href="#" class="nav-cta">Start Free</a>
+</nav>
+
+<!-- HERO -->
+<section class="hero" id="hero">
+  <div class="parallax-layer" id="layer-grid"></div>
+  <div class="parallax-layer" id="layer-orbs">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+  </div>
+  <div class="parallax-layer" id="layer-nodes">
+    <div class="float-node active n1">✓ deploy/prod</div>
+    <div class="float-node build n2">⟳ build #2441</div>
+    <div class="float-node test n3">▶ jest 142 tests</div>
+    <div class="float-node active n4">✓ lint passed</div>
+    <div class="float-node build n5">⟳ docker push</div>
+    <div class="float-node active n6">✓ k8s rolling</div>
+  </div>
+
+  <div class="hero-content">
+    <div class="hero-badge">
+      <span class="badge-dot"></span>
+      All systems operational — 99.98% uptime this month
+    </div>
+    <h1>Ship code.<br/>Not <em>confidence</em> issues.</h1>
+    <p class="hero-sub">
+      FlowDeploy automates your entire CI/CD pipeline — from commit to Kubernetes rollout — with zero-downtime deploys, instant rollback, and real-time observability.
+    </p>
+    <div class="hero-actions">
+      <a href="#" class="btn-primary">Deploy in 5 minutes →</a>
+      <a href="#pipeline" class="btn-ghost">See the pipeline</a>
+    </div>
+
+    <div class="stats-bar">
+      <div class="stat">
+        <span class="stat-val" data-count="4.2">0</span>
+        <span class="stat-lbl">Avg deploy time (min)</span>
+      </div>
+      <div class="stat">
+        <span class="stat-val" data-count="99.98">0</span>
+        <span class="stat-lbl">Uptime SLA (%)</span>
+      </div>
+      <div class="stat">
+        <span class="stat-val" data-count="12400">0</span>
+        <span class="stat-lbl">Deploys today</span>
+      </div>
+      <div class="stat">
+        <span class="stat-val" data-count="0">0</span>
+        <span class="stat-lbl">Incidents (30d)</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PIPELINE -->
+<section id="pipeline" style="padding: 7rem 3rem; max-width:1100px; margin: 0 auto;">
+  <div class="reveal">
+    <span class="section-eye">// how it works</span>
+    <h2 class="section-title">One push.<br/>Everything else is automatic.</h2>
+    <p class="section-sub">Your commit triggers a fully orchestrated pipeline. Every stage runs in parallel where possible, with dependency-aware sequencing.</p>
+  </div>
+  <div class="pipeline reveal">
+    <div class="pipe-stage">
+      <div class="pipe-arrow"></div>
+      <div class="pipe-icon">🔀</div>
+      <div class="pipe-name success">Source</div>
+      <div class="pipe-desc">Git push triggers webhook. Branch rules, PR checks, and code owner approvals enforced automatically.</div>
+      <div class="pipe-time"><span class="dot-status green"></span> ~0.3s</div>
+    </div>
+    <div class="pipe-stage">
+      <div class="pipe-arrow"></div>
+      <div class="pipe-icon">🔨</div>
+      <div class="pipe-name success">Build</div>
+      <div class="pipe-desc">Dockerized builds with layer caching. Multi-arch support. SBOM generated per image.</div>
+      <div class="pipe-time"><span class="dot-status green"></span> ~1.2m</div>
+    </div>
+    <div class="pipe-stage">
+      <div class="pipe-arrow"></div>
+      <div class="pipe-icon">🧪</div>
+      <div class="pipe-name running">Test</div>
+      <div class="pipe-desc">Unit, integration, and E2E tests run in sharded parallel workers. Flake detection built-in.</div>
+      <div class="pipe-time"><span class="dot-status cyan"></span> running</div>
+      <div class="run-bar"><div class="run-fill"></div></div>
+    </div>
+    <div class="pipe-stage">
+      <div class="pipe-arrow"></div>
+      <div class="pipe-icon">🔒</div>
+      <div class="pipe-name pending">Scan</div>
+      <div class="pipe-desc">CVE scanning, SAST, secrets detection, and policy-as-code gates. Nothing ships with known vulnerabilities.</div>
+      <div class="pipe-time"><span class="dot-status grey"></span> queued</div>
+    </div>
+    <div class="pipe-stage">
+      <div class="pipe-icon">🚀</div>
+      <div class="pipe-name pending">Deploy</div>
+      <div class="pipe-desc">Rolling Kubernetes deploy with canary traffic splitting. Auto-rollback on error budget breach.</div>
+      <div class="pipe-time"><span class="dot-status grey"></span> queued</div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="features" id="features">
+  <div class="features-inner">
+    <div class="reveal">
+      <span class="section-eye">// capabilities</span>
+      <h2 class="section-title">Built for teams<br/>who ship daily.</h2>
+      <p class="section-sub">Every feature was designed around one constraint: production is sacred. Speed is the reward for getting safety right.</p>
+    </div>
+    <div class="feat-grid reveal">
+      <div class="feat-card">
+        <div class="feat-icon">⚡</div>
+        <div class="feat-name">Parallel Execution</div>
+        <div class="feat-desc">Independent stages run simultaneously on elastic runners. A 12-minute pipeline becomes 3 minutes at scale.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">↩️</div>
+        <div class="feat-name">Instant Rollback</div>
+        <div class="feat-desc">One command or one click. Previous image versions are kept ready. Mean time to recover under 45 seconds.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">🌐</div>
+        <div class="feat-name">Multi-Cloud Deploy</div>
+        <div class="feat-desc">AWS, GCP, Azure, and bare-metal. A single pipeline definition works everywhere with environment-specific overrides.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">📊</div>
+        <div class="feat-name">DORA Metrics</div>
+        <div class="feat-desc">Deployment frequency, lead time, change failure rate, and MTTR tracked automatically. No extra instrumentation.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">🔐</div>
+        <div class="feat-name">Secrets Management</div>
+        <div class="feat-desc">Vault-native integration. Secrets are injected at runtime, never stored in CI logs or environment variables.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">🔔</div>
+        <div class="feat-name">Smart Alerts</div>
+        <div class="feat-desc">Alert routing based on ownership. The team who owns the code gets paged, not the whole org. SLO-aware suppression.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TERMINAL -->
+<section class="terminal-section reveal">
+  <span class="section-eye">// getting started</span>
+  <h2 class="section-title" style="margin-bottom:.8rem;">Deploy in three commands.</h2>
+  <p class="section-sub">No YAML archaeology. No cloud console spelunking.</p>
+  <div class="terminal">
+    <div class="terminal-bar">
+      <div class="t-dot r"></div>
+      <div class="t-dot y"></div>
+      <div class="t-dot g"></div>
+      <span class="t-label">bash — flowdeploy</span>
+    </div>
+    <div class="terminal-body">
+      <div><span class="t-prompt">$</span> <span class="t-cmd">npm install -g flowdeploy</span></div>
+      <div class="t-ok">✓ FlowDeploy v3.4.1 installed</div>
+      <div style="margin-top:.5rem"><span class="t-prompt">$</span> <span class="t-cmd">flowdeploy init --stack kubernetes --cloud aws</span></div>
+      <div class="t-info">→ Detecting project structure...</div>
+      <div class="t-ok">✓ Node.js app detected (Next.js 14)</div>
+      <div class="t-ok">✓ Dockerfile generated</div>
+      <div class="t-ok">✓ Pipeline config written → .flowdeploy/pipeline.yml</div>
+      <div class="t-ok">✓ GitHub Actions integration connected</div>
+      <div style="margin-top:.5rem"><span class="t-prompt">$</span> <span class="t-cmd">flowdeploy deploy --env production</span></div>
+      <div class="t-info">→ Build #2442 started</div>
+      <div class="t-ok">✓ Tests passed (142/142, 2m 14s)</div>
+      <div class="t-ok">✓ Security scan clean (0 CVEs)</div>
+      <div class="t-hi">⟳ Deploying to k8s cluster prod-us-east-1...</div>
+      <div class="t-ok">✓ Rolling deploy complete — 6/6 pods healthy</div>
+      <div class="t-ok">✓ <span class="t-hi">https://myapp.com</span> is live · Deploy time: 4m 8s</div>
+      <div style="margin-top:.3rem"><span class="t-prompt">$</span> <span class="t-cursor"></span></div>
+    </div>
+  </div>
+</section>
+
+<!-- PARALLAX MID BAND -->
+<div class="parallax-mid">
+  <div id="layer-mid-bg" class="parallax-layer"></div>
+  <div id="layer-mid-grid" class="parallax-layer"></div>
+  <div class="mid-content reveal">
+    <h2>Your pipeline.<br/><em>Infinitely</em> observable.</h2>
+    <p>Every deploy emits structured events. Trace any failure back to the exact commit, test, and infra change that caused it.</p>
+    <a href="#" class="btn-primary">Explore the dashboard →</a>
+  </div>
+</div>
+
+<!-- METRICS -->
+<section class="metrics" id="metrics">
+  <div class="reveal">
+    <span class="section-eye">// live platform metrics</span>
+    <h2 class="section-title">The numbers<br/>behind the trust.</h2>
+    <p class="section-sub">Updated in real-time from our global runner fleet.</p>
+  </div>
+  <div class="metrics-grid reveal">
+    <div class="metric-card">
+      <div class="metric-label">Deployment Frequency</div>
+      <div class="metric-val c">847/hr</div>
+      <div class="metric-bar"><div class="metric-fill c" style="width:82%"></div></div>
+      <div class="metric-sub">↑ 14% vs last week</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Change Failure Rate</div>
+      <div class="metric-val g">0.3%</div>
+      <div class="metric-bar"><div class="metric-fill g" style="width:97%"></div></div>
+      <div class="metric-sub">Elite DORA tier (&lt;1%)</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Mean Lead Time</div>
+      <div class="metric-val v">4.2m</div>
+      <div class="metric-bar"><div class="metric-fill v" style="width:70%"></div></div>
+      <div class="metric-sub">Commit to production</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">MTTR</div>
+      <div class="metric-val a">38s</div>
+      <div class="metric-bar"><div class="metric-fill a" style="width:92%"></div></div>
+      <div class="metric-sub">Mean time to recover</div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <p>© 2026 <strong>FlowDeploy</strong> — Automate everything, own your uptime.</p>
+</footer>
+
+<script>
+  // ── MULTI-LAYER PARALLAX ──
+  const layerGrid   = document.getElementById('layer-grid');
+  const layerOrbs   = document.getElementById('layer-orbs');
+  const layerNodes  = document.getElementById('layer-nodes');
+  const layerMidBg  = document.getElementById('layer-mid-bg');
+  const layerMidGrid = document.getElementById('layer-mid-grid');
+
+  let ticking = false;
+  window.addEventListener('scroll', () => {
+    if (!ticking) {
+      requestAnimationFrame(() => {
+        const y = window.scrollY;
+        // Hero layers at different speeds
+        layerGrid.style.transform  = `translateY(${y * 0.25}px)`;
+        layerOrbs.style.transform  = `translateY(${y * 0.4}px)`;
+        layerNodes.style.transform = `translateY(${y * 0.15}px)`;
+        // Mid-section parallax
+        const midSection = layerMidBg.parentElement;
+        const midTop = midSection.getBoundingClientRect().top;
+        layerMidBg.style.transform   = `translateY(${-midTop * 0.35}px)`;
+        layerMidGrid.style.transform = `translateY(${-midTop * 0.18}px)`;
+        ticking = false;
+      });
+      ticking = true;
+    }
+  });
+
+  // ── SCROLL REVEAL ──
+  const reveals = document.querySelectorAll('.reveal');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) { e.target.classList.add('visible'); }
+    });
+  }, { threshold: 0.1 });
+  reveals.forEach(el => observer.observe(el));
+
+  // ── COUNT-UP STATS ──
+  function countUp(el, target, duration, decimals) {
+    const start = performance.now();
+    const update = (now) => {
+      const t = Math.min((now - start) / duration, 1);
+      const ease = t < .5 ? 2*t*t : -1+(4-2*t)*t;
+      const val = ease * target;
+      el.textContent = decimals ? val.toFixed(decimals) : Math.round(val).toLocaleString();
+      if (t < 1) requestAnimationFrame(update);
+    };
+    requestAnimationFrame(update);
+  }
+
+  const statsObserver = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.querySelectorAll('[data-count]').forEach(el => {
+          const val = parseFloat(el.dataset.count);
+          const dec = val % 1 !== 0 ? (val.toString().split('.')[1]?.length || 2) : 0;
+          countUp(el, val, 1800, dec);
+        });
+        statsObserver.unobserve(e.target);
+      }
+    });
+  }, { threshold: .3 });
+  document.querySelectorAll('.stats-bar').forEach(el => statsObserver.observe(el));
+</script>
 </body>
 </html>
